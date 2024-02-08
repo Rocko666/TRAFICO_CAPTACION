@@ -20,23 +20,23 @@ def q_generar_universo_altas(FECHA_INICIO, FECHA_FIN):
         END AS tipo_movimiento,
         fecha_alta AS fecha_movimiento,
         CASE      
-            WHEN SEGMENTO_FIN = 'TITANIUM' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'SIN SEGMENTO' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'MASIVOS' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'INDIVIDUAL' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'GOLD' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'CARIBU' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'ALTO VALOR' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'SILVER' THEN 'PARQUE INDIVIDUOS'    
-            WHEN SEGMENTO_FIN = 'PYMES' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = 'OTROS' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = 'NEGOCIOS' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = 'GRANDES CUENTAS' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = 'EMPRESAS' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = 'TELEFONIA PUBLICA' THEN 'PARQUE NEGOCIOS'    
-            WHEN SEGMENTO_FIN = '' THEN 'PARQUE INDIVIDUOS'
+            WHEN SEGMENTO_FIN = 'TITANIUM' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'SIN SEGMENTO' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'MASIVOS' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'INDIVIDUAL' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'GOLD' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'CARIBU' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'ALTO VALOR' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'SILVER' THEN 'B2C'    
+            WHEN SEGMENTO_FIN = 'PYMES' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = 'OTROS' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = 'NEGOCIOS' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = 'GRANDES CUENTAS' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = 'EMPRESAS' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = 'TELEFONIA PUBLICA' THEN 'B2B'    
+            WHEN SEGMENTO_FIN = '' THEN 'B2C'
             ELSE SEGMENTO_FIN    
-        END AS parque
+        END AS segmento
     FROM db_cs_altas.otc_t_altas_bi
     WHERE p_fecha_proceso >= {FECHA_INICIO}
         AND p_fecha_proceso <= {FECHA_FIN} 
@@ -50,12 +50,17 @@ def q_generar_universo_transferencias(FECHA_INICIO, FECHA_FIN):
     qry = """
     SELECT DISTINCT telefono,
         "Transferencia" AS tipo_movimiento,
-        fecha_transferencia AS fecha_movimiento
+        fecha_transferencia AS fecha_movimiento,
+        CASE      
+            WHEN segmento_actual = 'INDIVIDUAL' THEN 'B2C'    
+            WHEN segmento_actual = 'GGCC' THEN 'B2B'    
+            WHEN segmento_actual = 'NEGOCIOS' THEN 'B2B' 
+            ELSE segmento_actual    
+        END AS segmento
     FROM db_cs_altas.otc_t_transfer_in_bi
     WHERE p_fecha_proceso >= {FECHA_INICIO}
         AND p_fecha_proceso <= {FECHA_FIN} 
         AND CATEGORIA_ACTUAL = "VOZ" 
-        AND segmento_actual = "INDIVIDUAL" 
     """.format(FECHA_INICIO=FECHA_INICIO, FECHA_FIN=FECHA_FIN)
     return qry
 
@@ -65,6 +70,7 @@ def q_generar_universo_trafico_captacion(vSChema):
     SELECT tipo_movimiento,
         telefono,
         fecha_movimiento,
+        segmento,
         date_format(fecha_movimiento, 'yyyyMMdd') fecha_alta,
         date_format(date_add(fecha_movimiento, 6),'yyyyMMdd') fecha_alta_7,
         date_format(date_add(fecha_movimiento, 14),'yyyyMMdd') fecha_alta_15,
@@ -184,9 +190,10 @@ def q_insertar_trafico_captacion(vSChema, FECHA_EJECUCION):
             total_trafico_datos_15,
             trafico_entrante_voz_30,
             trafico_saliente_voz_30,
-            total_trafico_datos_30
+            total_trafico_datos_30,
+            segmento
 		FROM {vSChema}.trafico_captacion_diario
-       	""".format(vSChema=vSChema, FECHA_EJECUCION=FECHA_EJECUCION)
+        """.format(vSChema=vSChema, FECHA_EJECUCION=FECHA_EJECUCION)
 	return qry
 
 def q_generar_reporte_trafico_captacion(vSChema):
@@ -203,7 +210,8 @@ def q_generar_reporte_trafico_captacion(vSChema):
             trafico_entrante_voz_30,
             trafico_saliente_voz_30,
             total_trafico_datos_30,
-            fecha_proceso
+            fecha_proceso,
+            segmento
 		FROM {vSChema}.trafico_captacion
-       	""".format(vSChema=vSChema)
+        """.format(vSChema=vSChema)
 	return qry

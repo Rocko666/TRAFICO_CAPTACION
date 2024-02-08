@@ -175,58 +175,58 @@ if [ $ETAPA = 1 ]; then
 
     # seteo de etapa
     echo "Procesado ETAPA 1" &>>$VAL_LOG
-    $(mysql -N <<<"update $TABLA set valor='2' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
+    $(mysql -N <<<"update $TABLA set valor='1' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
     ETAPA=2
 fi
 
 #------------------------------------------------------
 # GENERACION DE REPORTE CSV
 #------------------------------------------------------
-if [ $ETAPA = 2 ]; then
+### if [ $ETAPA = 2 ]; then
+### 
+###     $VAL_RUTA_SPARK \
+###         --conf spark.port.maxRetries=100 \
+###         --master $VAL_MASTER \
+###         --name $ENTIDAD \
+###         --driver-memory $VAL_DRIVER_MEMORY \
+###         --executor-memory $VAL_EXECUTOR_MEMORY \
+###         --num-executors $VAL_NUM_EXECUTORS \
+###         --executor-cores $VAL_NUM_EXECUTORS_CORES \
+###         $VAL_RUTA/python/generar_reporte_csv.py \
+###         --vSEntidad=$ENTIDAD \
+###         --vSQueue=$VAL_COLA_EJECUCION \
+###         --vSChema=$ESQUEMA \
+###         --RUTA_CSV=$VAL_LOCAL_RUTA_OUT/$VAL_NOM_FILE_OUT 2>&1 &>> $VAL_LOG
 
-    $VAL_RUTA_SPARK \
-        --conf spark.port.maxRetries=100 \
-        --master $VAL_MASTER \
-        --name $ENTIDAD \
-        --driver-memory $VAL_DRIVER_MEMORY \
-        --executor-memory $VAL_EXECUTOR_MEMORY \
-        --num-executors $VAL_NUM_EXECUTORS \
-        --executor-cores $VAL_NUM_EXECUTORS_CORES \
-        $VAL_RUTA/python/generar_reporte_csv.py \
-        --vSEntidad=$ENTIDAD \
-        --vSQueue=$VAL_COLA_EJECUCION \
-        --vSChema=$ESQUEMA \
-        --RUTA_CSV=$VAL_LOCAL_RUTA_OUT/$VAL_NOM_FILE_OUT 2>&1 &>> $VAL_LOG
+###     echo "==== FIN PROCESO GENERACION DE REPORTE CSV ====" >>$VAL_LOG
 
-    echo "==== FIN PROCESO GENERACION DE REPORTE CSV ====" >>$VAL_LOG
+###     # seteo de etapa
+###     echo "Procesado ETAPA 2" &>>$VAL_LOG
+###     $(mysql -N <<<"update $TABLA set valor='3' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
+###     ETAPA=3
+### fi
 
-    # seteo de etapa
-    echo "Procesado ETAPA 2" &>>$VAL_LOG
-    $(mysql -N <<<"update $TABLA set valor='3' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
-    ETAPA=3
-fi
+### if [ $ETAPA = 3 ]; then
+###     VAL_SFTP_RUTA_OUT=$(echo $VAL_SFTP_RUTA_OUT | sed "s/~}</ /g")
+###     VAL_SFTP_RUTA_OUT=$(echo $VAL_SFTP_RUTA_OUT | tr '"' "'")
 
-if [ $ETAPA = 3 ]; then
-    VAL_SFTP_RUTA_OUT=$(echo $VAL_SFTP_RUTA_OUT | sed "s/~}</ /g")
-    VAL_SFTP_RUTA_OUT=$(echo $VAL_SFTP_RUTA_OUT | tr '"' "'")
+###     sh -x $SFTP_GENERICO_SH \
+###         $VAL_MODO $VAL_BANDERA_FTP \
+###         $VAL_SFTP_USER_OUT $VAL_SFTP_PASS_OUT $VAL_SFTP_HOST_OUT $VAL_SFTP_PORT_OUT "${VAL_SFTP_RUTA_OUT}"  \
+###         $VAL_NOM_FILE_OUT $VAL_LOCAL_RUTA_OUT $VAL_LOG
 
-    sh -x $SFTP_GENERICO_SH \
-        $VAL_MODO $VAL_BANDERA_FTP \
-        $VAL_SFTP_USER_OUT $VAL_SFTP_PASS_OUT $VAL_SFTP_HOST_OUT $VAL_SFTP_PORT_OUT "${VAL_SFTP_RUTA_OUT}"  \
-        $VAL_NOM_FILE_OUT $VAL_LOCAL_RUTA_OUT $VAL_LOG
+### 	VAL_ERRORES=$(egrep 'ERROR - En la transferencia del archivo' $VAL_LOG | wc -l)
 
-	VAL_ERRORES=$(egrep 'ERROR - En la transferencia del archivo' $VAL_LOG | wc -l)
+### 	if [ $VAL_ERRORES -ne 0 ]; then
+### 		echo "==== ERROR en la transferencia FTP ====" >>$VAL_LOG
+### 		exit 1
+### 	else
+### 		echo "==== FIN PROCESO EXPORTACION FTP ====" >>$VAL_LOG
+### 	fi
 
-	if [ $VAL_ERRORES -ne 0 ]; then
-		echo "==== ERROR en la transferencia FTP ====" >>$VAL_LOG
-		exit 1
-	else
-		echo "==== FIN PROCESO EXPORTACION FTP ====" >>$VAL_LOG
-	fi
+###     # seteo de etapa
+###     echo "Procesado ETAPA 3" &>>$VAL_LOG
+###     $(mysql -N <<<"update $TABLA set valor='1' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
+### fi
 
-    # seteo de etapa
-    echo "Procesado ETAPA 3" &>>$VAL_LOG
-    $(mysql -N <<<"update $TABLA set valor='1' where ENTIDAD = '${ENTIDAD}' and parametro = 'ETAPA';")
-fi
-
-echo "==== FIN PROCESO TRAFICO CAPTACION ====" >>$VAL_LOG
+### echo "==== FIN PROCESO TRAFICO CAPTACION ====" >>$VAL_LOG

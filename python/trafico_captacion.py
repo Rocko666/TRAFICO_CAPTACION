@@ -107,7 +107,7 @@ try:
     print(etq_sql(vSQL))
 
     universo_altas = spark.sql(vSQL)
-    universo_altas = universo_altas.where(col("parque") == "PARQUE INDIVIDUOS").select("telefono", "tipo_movimiento", "fecha_movimiento")
+    universo_altas = universo_altas.select("telefono", "tipo_movimiento", "fecha_movimiento","segmento")
     universo_altas.show(3)
 
     if universo_altas.limit(1).count <= 0:
