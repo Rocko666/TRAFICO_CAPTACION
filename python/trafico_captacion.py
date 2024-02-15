@@ -100,7 +100,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     vSQL = q_generar_universo_altas(FECHA_FIN_MES_PREVIO, FECHA_EJECUCION)    
@@ -129,7 +128,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     vSQL = q_generar_universo_transferencias(FECHA_FIN_MES_PREVIO, FECHA_EJECUCION)    
@@ -157,7 +155,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     universo_trafico_captacion = universo_altas.union(universo_transferencias)
@@ -192,7 +189,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     vSQL = q_generar_universo_trafico_captacion(vSChemaTmp)    
@@ -222,7 +218,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     vSQL = q_generar_ventanas_moviles()
@@ -249,13 +244,12 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     # se crea el reporte de trafico datos para 7 dias
     vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_7, lineas_universo_altas)    
     reporte_datos_7_dias = spark.sql(vSQL)
-    print(etq_sql(vSQL))
+    #print(etq_sql(vSQL))
 
     reporte_datos_7_dias = reporte_datos_7_dias.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_datos_7_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_7_dias".format(vSChemaTmp))
@@ -267,7 +261,7 @@ try:
     # se crea el reporte de trafico datos para 15 dias
     vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_15, lineas_universo_altas)    
     reporte_datos_15_dias = spark.sql(vSQL)
-    print(etq_sql(vSQL))
+    #print(etq_sql(vSQL))
 
     reporte_datos_15_dias = reporte_datos_15_dias.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_datos_15_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_15_dias".format(vSChemaTmp))
@@ -279,7 +273,7 @@ try:
     # se crea el reporte de trafico datos para 30 dias
     vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)    
     reporte_datos_30_dias = spark.sql(vSQL)
-    print(etq_sql(vSQL))
+    #print(etq_sql(vSQL))
 
     reporte_datos_30_dias = reporte_datos_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_datos_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_30_dias".format(vSChemaTmp))
@@ -324,14 +318,13 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     sentido = "SALIENTE"
 
     vSQL = q_generar_reporte_trafico_voz(vSChemaTmp, "a_direction_number", FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)
     reporte_voz_30_dias = generar_reporte(vSQL)
-    print(etq_sql(vSQL))
+    #print(etq_sql(vSQL))
 
     reporte_voz_30_dias = reporte_voz_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_voz_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_saliente_30".format(vSChemaTmp))
@@ -381,14 +374,13 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     sentido = "ENTRANTE"
 
     vSQL = q_generar_reporte_trafico_voz(vSChemaTmp, "b_direction_number", FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)
     reporte_voz_30_dias = generar_reporte(vSQL)
-    print(etq_sql(vSQL))
+    #print(etq_sql(vSQL))
 
     reporte_voz_30_dias = reporte_voz_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_voz_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_entrante_30".format(vSChemaTmp))
@@ -438,7 +430,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     if ELIMINAR_PARTICION_PREVIA == "SI":
@@ -471,7 +462,6 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(etq_info(str(vSStep)))
     print(lne_dvs())
 
     # se crea el reporte trafico captacion pospago
