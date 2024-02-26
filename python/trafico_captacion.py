@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
-
+# -- coding: utf-8 --
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
-
-import os
 import argparse
 from datetime import datetime
-
 from pyspark.sql.functions import col, lit
 from pyspark.sql import SparkSession
-
 from query import *
-
 sys.path.insert(1, '/var/opt/tel_spark')
 from messages import *
 from functions import *
 from create import *
-
 
 def generar_reporte(vSQL):
     reporte = spark.sql(vSQL)
@@ -102,11 +95,12 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_generar_universo_altas(FECHA_FIN_MES_PREVIO, FECHA_EJECUCION)    
+    vSQL = q_generar_universo_altas(FECHA_EJECUCION)    
     print(etq_sql(vSQL))
 
     universo_altas = spark.sql(vSQL)
     universo_altas = universo_altas.select("telefono", "tipo_movimiento", "fecha_movimiento","segmento")
+    universo_altas.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.universo_altas_test".format(vSChemaTmp))
     universo_altas.show(3)
 
     if universo_altas.limit(1).count <= 0:
@@ -130,7 +124,7 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_generar_universo_transferencias(FECHA_FIN_MES_PREVIO, FECHA_EJECUCION)    
+    vSQL = q_generar_universo_transferencias(FECHA_EJECUCION)    
     print(etq_sql(vSQL))
 
     universo_transferencias = spark.sql(vSQL)

@@ -1,0 +1,48 @@
+SELECT t1.FECHA_PROCESO,           t1.FECHA_ALTA,
+
+          t1.LINEA_NEGOCIO,           t1.TELEFONO,
+
+          t1.ACCOUNT_NUM,           t1.DOCUMENTO_CLIENTE,
+
+          t1.TIPO_DOC_CLIENTE,           t1.CLIENTE,
+
+          t1.SEGMENTO,           t1.SUB_SEGMENTO,
+
+          t1.CATEGORIA_PLAN,           t1.PLAN_CODIGO,
+
+          t1.NOMBRE_PLAN,           t1.TARIFA_BASICA,
+
+          t1.PORTABILIDAD,          t1.EJECUTIVO_ASIGNADO_PTR,
+
+          t1.JEFATURA_PTR,
+
+            (  (CASE WHEN (t1.SUB_SEGMENTO) iN ('GCEMP','GGCC','GGCCGLOBALES','GGDATOSFIJOS','GGCCK',
+
+            'CANALESSIMCARDS', 'GGCCGOBIERNO' ,'GGCCDATOSFIJOS') THEN 'EMPRESAS'
+
+                WHEN t1.SUB_SEGMENTO NOT iN ('OTECEL','TUPS','TELEFONÍAPÚBLICA','TELEFONIAPUBLICA',
+
+            'TELEFONIAPUBLICA' 'TELEFONÍAPÚBLICA' 'TELEFONÍAPÚBLICA','MASIVOS','CANALES EQUIPOS') THEN 'NEGOCIOS'
+
+            ELSE '' END )) AS SUBSEGMENTO,
+
+          t1.FORMA_PAGO,           t1.Operadora_origen AS OPERADORA,
+
+          t1.CANAL_COMERCIAL AS CANAL,           t1.DISTRIBUIDOR,
+
+          t1.OFICINA,           t1.NOM_DISTRIBUIDOR,
+
+          t1.DOMAIN_LOGIN_OW,           t1.NOMBRE_USUARIO_OW
+
+      FROM db_cs_altas.otc_t_altas_bi t1
+
+      where p_fecha_proceso = 20240201 and t1.LINEA_NEGOCIO <> 'PREPAGO'  AND t1.SUB_SEGMENTO NOT IN
+
+           ('OTECEL', 'TELEFONÍA PÚBLICA', 'TELEFONIA PUBLICA', 'CANALES EQUIPOS','MASIVO')
+
+           AND t1.CATEGORIA_PLAN = 'VOZ' AND t1.PLAN_CODIGO <> 'S2' AND t1.SEGMENTO_FIN IN
+
+           ('EMPRESAS', 'GRANDES CUENTAS', 'NEGOCIOS', 'PYMES');
+
+
+TELEFONÃA PÃšBLICA

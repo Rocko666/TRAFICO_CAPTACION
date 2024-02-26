@@ -1,4 +1,7 @@
-# """
+# -- coding: utf-8 --
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 # fuentes:
 # db_cs_altas.otc_t_altas_bi
 # db_cs_altas.otc_t_transfer_in_bi
@@ -9,10 +12,9 @@
 # db_reportes.trafico_captacion
 # """
 
-
-def q_generar_universo_altas(FECHA_INICIO, FECHA_FIN):
+def q_generar_universo_altas(FECHA_FIN):
     qry = """
-    SELECT DISTINCT telefono,
+    SELECT telefono,
         CASE 
             WHEN portabilidad = 'SI' THEN 'Portabilidad' 
             WHEN portabilidad = 'INTRA' THEN 'Portabilidad' 
@@ -38,17 +40,18 @@ def q_generar_universo_altas(FECHA_INICIO, FECHA_FIN):
             ELSE SEGMENTO_FIN    
         END AS segmento
     FROM db_cs_altas.otc_t_altas_bi
-    WHERE p_fecha_proceso >= {FECHA_INICIO}
-        AND p_fecha_proceso <= {FECHA_FIN} 
-        AND linea_negocio NOT IN ('PREPAGO')  
-        AND CATEGORIA_PLAN NOT IN ('BAM','HOM')
-    """.format(FECHA_INICIO=FECHA_INICIO, FECHA_FIN=FECHA_FIN)
+    WHERE p_fecha_proceso = {FECHA_FIN} 
+        AND LINEA_NEGOCIO <> 'PREPAGO'
+        AND SUB_SEGMENTO NOT IN ('OTECEL', 'TELEFONÃA PÃšBLICA', 'TELEFONIA PUBLICA', 'CANALES EQUIPOS','MASIVO')
+        AND CATEGORIA_PLAN = 'VOZ' 
+        AND PLAN_CODIGO <> 'S2' 
+        AND SEGMENTO_FIN IN ('EMPRESAS', 'GRANDES CUENTAS', 'NEGOCIOS', 'PYMES')
+    """.format(FECHA_FIN=FECHA_FIN)
     return qry
 
-
-def q_generar_universo_transferencias(FECHA_INICIO, FECHA_FIN):
+def q_generar_universo_transferencias(FECHA_FIN):
     qry = """
-    SELECT DISTINCT telefono,
+    SELECT telefono,
         "Transferencia" AS tipo_movimiento,
         fecha_transferencia AS fecha_movimiento,
         CASE      
@@ -58,12 +61,14 @@ def q_generar_universo_transferencias(FECHA_INICIO, FECHA_FIN):
             ELSE segmento_actual    
         END AS segmento
     FROM db_cs_altas.otc_t_transfer_in_bi
-    WHERE p_fecha_proceso >= {FECHA_INICIO}
-        AND p_fecha_proceso <= {FECHA_FIN} 
-        AND CATEGORIA_ACTUAL = "VOZ" 
-    """.format(FECHA_INICIO=FECHA_INICIO, FECHA_FIN=FECHA_FIN)
+    WHERE p_fecha_proceso = {FECHA_FIN} 
+        AND TIPO_DOC_CLIENTE IN ('RUC','RUC Personal','RUC/RUC Personal')
+        AND LINEA_NEGOCIO <> 'PREPAGO' 
+        AND CATEGORIA_ACTUAL = 'VOZ'
+        AND SUB_SEGMENTO_ACTUAL NOT IN ('OTECEL','TELEFONÃA PÃšBLICA','TELEFONIA PUBLICA','CANALES EQUIPOS','MASIVO','MASIVO MIGRADO','NUEVOS INDIVIDUALES','CICLO ANTICIPADO NUEVOS INDIVIDUALES') 
+        AND CODIGO_PLAN_ANTERIOR <> 'S2'
+    """.format(FECHA_FIN=FECHA_FIN)
     return qry
-
 
 def q_generar_universo_trafico_captacion(vSChema):
     qry = """
@@ -79,7 +84,6 @@ def q_generar_universo_trafico_captacion(vSChema):
     """.format(vSChema=vSChema)
     return qry
 
-
 def q_generar_ventanas_moviles():
     qry = """
     SELECT MAX(fecha_alta_7) AS fecha_alta_7,
@@ -88,7 +92,6 @@ def q_generar_ventanas_moviles():
     FROM universo_trafico_captacion
     """.format()
     return qry
-
 
 def q_generar_reporte_trafico_datos(vSChema, FECHA_INICIO, FECHA_FIN, LINEAS_UNIVERSO_ALTAS):
     qry = """
@@ -110,7 +113,6 @@ def q_generar_reporte_trafico_datos(vSChema, FECHA_INICIO, FECHA_FIN, LINEAS_UNI
         )
     return qry
 
-
 def q_generar_reporte_trafico_datos_resumido(vSChema, TABLA, COLUMNA_FECHA_INICIO, COLUMNA_FECHA_FIN):
     qry = """
     SELECT telefono,
@@ -130,7 +132,6 @@ def q_generar_reporte_trafico_datos_resumido(vSChema, TABLA, COLUMNA_FECHA_INICI
     )
     return qry
 
-
 def q_generar_reporte_trafico_voz(vSChema, COLUMNA, FECHA_INICIO, FECHA_FIN, LINEAS_UNIVERSO_ALTAS):
     qry = """
     SELECT {COLUMNA} AS telefono,
@@ -148,7 +149,6 @@ def q_generar_reporte_trafico_voz(vSChema, COLUMNA, FECHA_INICIO, FECHA_FIN, LIN
         LINEAS_UNIVERSO_ALTAS=LINEAS_UNIVERSO_ALTAS
     )
     return qry
-
 
 def q_generar_reporte_trafico_voz_resumido(vSChema, TABLA, COLUMNA_FECHA_INICIO, COLUMNA_FECHA_FIN, sentido, DIAS):
     qry = """
@@ -168,13 +168,11 @@ def q_generar_reporte_trafico_voz_resumido(vSChema, TABLA, COLUMNA_FECHA_INICIO,
     )
     return qry
 
-
 def q_borrar_trafico_captacion_previo(vSChema, FECHA_EJECUCION_ANTERIOR):
     qry = """          
         ALTER TABLE {vSChema}.trafico_captacion DROP IF EXISTS PARTITION(fecha_proceso={FECHA_EJECUCION_ANTERIOR})
     """.format(vSChema=vSChema, FECHA_EJECUCION_ANTERIOR=FECHA_EJECUCION_ANTERIOR)
     return qry
-
 
 def q_insertar_trafico_captacion(vSChema, FECHA_EJECUCION):
 	qry = """
