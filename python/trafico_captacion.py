@@ -16,10 +16,8 @@ def generar_reporte(vSQL):
     reporte = spark.sql(vSQL)
     return reporte
 
-
 def sumar_trafico_datos(REPORTE, NUEVA):
     return REPORTE.withColumn(NUEVA, (col("total_trafico_2g") + col("total_trafico_3g") + col("total_trafico_lte") + col("total_trafico_otro")))
-
 
 timestart = datetime.now()
 vSStep = '[Paso 1]: Obteniendo parametros de la SHELL'
@@ -31,23 +29,23 @@ try:
     parser.add_argument('--vSEntidad', required=True, type=str, help='Entidad del proceso')
     parser.add_argument('--vSChema', required=True, type=str, help='')
     parser.add_argument('--vSChemaTmp', required=True, type=str, help='')
-    parser.add_argument('--FECHA_EJECUCION', required=True, type=str, help='')
-    parser.add_argument('--FECHA_EJECUCION_ANTERIOR', required=True, type=str, help='')
-    parser.add_argument('--ELIMINAR_PARTICION_PREVIA', required=True, type=str, help='')
-    parser.add_argument('--FECHA_DOS_ANIOS_ATRAS', required=True, type=str, help='')
-    parser.add_argument('--FECHA_INICIO', required=True, type=str, help='')
-    parser.add_argument('--FECHA_FIN_MES_PREVIO', required=True, type=str, help='')
+    parser.add_argument('--VAL_FECHA_EJECUCION', required=True, type=str, help='')
+    parser.add_argument('--VAL_FECHA_EJECUCION_ANTERIOR', required=True, type=str, help='')
+    parser.add_argument('--VAL_ELIM_PART_PREVIA', required=True, type=str, help='')
+    parser.add_argument('--VAL_FECHA_DOS_ANIOS_ATRAS', required=True, type=str, help='')
+    parser.add_argument('--VAL_FECHA_INI_MES', required=True, type=str, help='')
+    parser.add_argument('--VAL_FECHA_INI_2MES', required=True, type=str, help='')
     
     parametros = parser.parse_args()
     vSEntidad = parametros.vSEntidad
     vSChema = parametros.vSChema
     vSChemaTmp = parametros.vSChemaTmp
-    FECHA_EJECUCION = parametros.FECHA_EJECUCION
-    FECHA_EJECUCION_ANTERIOR = parametros.FECHA_EJECUCION_ANTERIOR
-    ELIMINAR_PARTICION_PREVIA = parametros.ELIMINAR_PARTICION_PREVIA
-    FECHA_DOS_ANIOS_ATRAS = parametros.FECHA_DOS_ANIOS_ATRAS
-    FECHA_INICIO = parametros.FECHA_INICIO
-    FECHA_FIN_MES_PREVIO = parametros.FECHA_FIN_MES_PREVIO
+    vFEje = parametros.VAL_FECHA_EJECUCION
+    vFEjeAnt = parametros.VAL_FECHA_EJECUCION_ANTERIOR
+    vElimPartPre = parametros.VAL_ELIM_PART_PREVIA
+    vF2AniosAtras = parametros.VAL_FECHA_DOS_ANIOS_ATRAS
+    vFIniMes = parametros.VAL_FECHA_INI_MES
+    vFIni2Mes = parametros.VAL_FECHA_INI_2MES
 
     print(lne_dvs())
     print(etq_info("Imprimiendo parametros..."))
@@ -55,12 +53,12 @@ try:
     print(etq_info(log_p_parametros("vSEntidad", str(vSEntidad))))
     print(etq_info(log_p_parametros("vSChema", str(vSChema))))
     print(etq_info(log_p_parametros("vSChemaTmp", str(vSChemaTmp))))
-    print(etq_info(log_p_parametros("FECHA_EJECUCION", str(FECHA_EJECUCION))))
-    print(etq_info(log_p_parametros("FECHA_EJECUCION_ANTERIOR", str(FECHA_EJECUCION_ANTERIOR))))
-    print(etq_info(log_p_parametros("ELIMINAR_PARTICION_PREVIA", str(ELIMINAR_PARTICION_PREVIA))))
-    print(etq_info(log_p_parametros("FECHA_DOS_ANIOS_ATRAS", str(FECHA_DOS_ANIOS_ATRAS))))
-    print(etq_info(log_p_parametros("FECHA_INICIO", str(FECHA_INICIO))))
-    print(etq_info(log_p_parametros("FECHA_FIN_MES_PREVIO", str(FECHA_FIN_MES_PREVIO))))    
+    print(etq_info(log_p_parametros("vFEje", str(vFEje))))
+    print(etq_info(log_p_parametros("vFEjeAnt", str(vFEjeAnt))))
+    print(etq_info(log_p_parametros("vElimPartPre", str(vElimPartPre))))
+    print(etq_info(log_p_parametros("vF2AniosAtras", str(vF2AniosAtras))))
+    print(etq_info(log_p_parametros("vFIniMes", str(vFIniMes))))       
+    print(etq_info(log_p_parametros("vFIni2Mes", str(vFIni2Mes))))   
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -93,14 +91,11 @@ print(etq_info(vSStep))
 print(lne_dvs())
 try:
     ts_step = datetime.now()  
-    print(lne_dvs())
-
-    vSQL = q_generar_universo_altas(FECHA_EJECUCION)    
+    vSQL = q_generar_universo_altas(vFIniMes, vFEje)    
     print(etq_sql(vSQL))
 
     universo_altas = spark.sql(vSQL)
     universo_altas = universo_altas.select("telefono", "tipo_movimiento", "fecha_movimiento","segmento")
-    universo_altas.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.universo_altas_test".format(vSChemaTmp))
     universo_altas.show(3)
 
     if universo_altas.limit(1).count <= 0:
@@ -124,7 +119,7 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_generar_universo_transferencias(FECHA_EJECUCION)    
+    vSQL = q_generar_universo_transferencias(vFIniMes, vFEje)    
     print(etq_sql(vSQL))
 
     universo_transferencias = spark.sql(vSQL)
@@ -152,20 +147,13 @@ try:
     print(lne_dvs())
 
     universo_trafico_captacion = universo_altas.union(universo_transferencias)
-    FECHA_INICIO_FORMATEADA = datetime.strptime(str(FECHA_INICIO), '%Y%m%d')
-    universo_trafico_captacion = universo_trafico_captacion.where(col("fecha_movimiento") >= FECHA_INICIO_FORMATEADA)
 
     if universo_trafico_captacion.limit(1).count <= 0:    
         exit(etq_nodata(msg_e_df_nodata(str('universo_trafico_captacion'))))
     else:
         vIRows = universo_trafico_captacion.count()
         print(etq_info(msg_t_total_registros_obtenidos('universo', str(vIRows))))
-       
         universo_trafico_captacion.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.universo_trafico_captacion".format(vSChemaTmp))
-        lineas_universo_altas = tuple(universo_trafico_captacion.select(
-            "telefono").rdd.map(lambda x: int(x[0])).collect()
-        )
-
         del universo_altas
         del universo_transferencias
         del universo_trafico_captacion
@@ -196,7 +184,6 @@ try:
     else:
         vIRows = universo_trafico_captacion.count()
         print(etq_info(msg_t_total_registros_obtenidos('universo', str(vIRows))))
-       
         universo_trafico_captacion.createOrReplaceTempView("universo_trafico_captacion")
 
     te_step = datetime.now()
@@ -214,17 +201,13 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_generar_ventanas_moviles()
+    vSQL = q_generar_ventanas_moviles(vFEje)
     print(etq_sql(vSQL))
 
-    ventanas_moviles = spark.sql(vSQL)
-    ventanas_moviles.show(3)
-
-    data_dict = ventanas_moviles.first().asDict()
-    FECHA_ALTA_PLUS_7 = data_dict["fecha_alta_7"]
-    FECHA_ALTA_PLUS_15 = data_dict["fecha_alta_15"]
-    FECHA_ALTA_PLUS_30 = data_dict["fecha_alta_30"]
-    
+    universo_trafico_captacion = spark.sql(vSQL)
+    universo_trafico_captacion.show(3)
+    universo_trafico_captacion.createOrReplaceTempView("universo_trafico_captacion")
+    #universo_trafico_captacion.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.universo_ventanas_moviles".format(vSChemaTmp))
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
 except Exception as e:
@@ -240,40 +223,48 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    # se crea el reporte de trafico datos para 7 dias
-    vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_7, lineas_universo_altas)    
-    reporte_datos_7_dias = spark.sql(vSQL)
-    #print(etq_sql(vSQL))
-
-    reporte_datos_7_dias = reporte_datos_7_dias.join(universo_trafico_captacion, on="telefono", how="left")
-    reporte_datos_7_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_7_dias".format(vSChemaTmp))
+    # se crea el reporte de trafico datos desde inicio de mes hasta la fecha de ejecucion
+    vSQL = q_generar_reporte_trafico_datos(vFIni2Mes, vFEje)    
+    reporte_datos = spark.sql(vSQL)
+    print('Se crea el reporte de trafico datos desde inicio de mes hasta la fecha de ejecucion:')
+    print(etq_sql(vSQL))
+    #reporte_datos.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos".format(vSChemaTmp))
+    reporte_datos.createOrReplaceTempView("reporte_datos")
     
-    vSQL = q_generar_reporte_trafico_datos_resumido(vSChemaTmp, "reporte_datos_7_dias", "fecha_alta", "fecha_alta_7")    
+    # se crea el reporte de trafico datos para 7 dias
+    vSQL = q_generar_reporte_trafico_datos_ventana("fecha_alta","fecha_alta_7")    
+    print('Se crea el reporte de trafico datos para 7 dias:')
     reporte_datos_7_dias = spark.sql(vSQL)
+    reporte_datos_7_dias.createOrReplaceTempView("reporte_datos_7_dias") 
+    print(etq_sql(vSQL))
+
+    vSQL = q_generar_reporte_trafico_datos_resumido("reporte_datos_7_dias")    
+    reporte_datos_7_dias = spark.sql(vSQL)
+    #reporte_datos_7_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_7_dias".format(vSChemaTmp))   
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico datos para 15 dias
-    vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_15, lineas_universo_altas)    
+    vSQL = q_generar_reporte_trafico_datos_ventana("fecha_alta","fecha_alta_15")  
+    print('Se crea el reporte de trafico datos para 15 dias:')    
     reporte_datos_15_dias = spark.sql(vSQL)
-    #print(etq_sql(vSQL))
-
-    reporte_datos_15_dias = reporte_datos_15_dias.join(universo_trafico_captacion, on="telefono", how="left")
-    reporte_datos_15_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_15_dias".format(vSChemaTmp))
+    reporte_datos_15_dias.createOrReplaceTempView("reporte_datos_15_dias")
+    print(etq_sql(vSQL))
     
-    vSQL = q_generar_reporte_trafico_datos_resumido(vSChemaTmp, "reporte_datos_15_dias", "fecha_alta", "fecha_alta_15")    
+    vSQL = q_generar_reporte_trafico_datos_resumido("reporte_datos_15_dias")    
     reporte_datos_15_dias = spark.sql(vSQL)
+    #reporte_datos_15_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_15_dias".format(vSChemaTmp))    
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico datos para 30 dias
-    vSQL = q_generar_reporte_trafico_datos(vSChemaTmp, FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)    
+    vSQL = q_generar_reporte_trafico_datos_ventana("fecha_alta","fecha_alta_30")   
+    print('Se crea el reporte de trafico datos para 30 dias:')
     reporte_datos_30_dias = spark.sql(vSQL)
-    #print(etq_sql(vSQL))
-
-    reporte_datos_30_dias = reporte_datos_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
-    reporte_datos_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_30_dias".format(vSChemaTmp))
+    reporte_datos_30_dias.createOrReplaceTempView("reporte_datos_30_dias")
+    print(etq_sql(vSQL))
     
-    vSQL = q_generar_reporte_trafico_datos_resumido(vSChemaTmp, "reporte_datos_30_dias", "fecha_alta", "fecha_alta_30")    
+    vSQL = q_generar_reporte_trafico_datos_resumido("reporte_datos_30_dias")    
     reporte_datos_30_dias = spark.sql(vSQL)
+    #reporte_datos_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_30_dias".format(vSChemaTmp))    
     print(etq_sql(vSQL))
 
     # se suman las 4 columnas de trafico datos
@@ -292,7 +283,7 @@ try:
         vIRows = reporte_trafico_datos.count()
         print(etq_info(msg_t_total_registros_obtenidos('reporte_trafico_datos', str(vIRows))))
         
-        # reporte_trafico_datos.write.mode("overwrite").saveAsTable("{}.trafico_captacion_datos".format(vSChemaTmp))
+        reporte_trafico_datos.write.mode("overwrite").saveAsTable("{}.trafico_captacion_datos".format(vSChemaTmp))
 
         del reporte_datos_7_dias
         del reporte_datos_15_dias
@@ -316,25 +307,30 @@ try:
 
     sentido = "SALIENTE"
 
-    vSQL = q_generar_reporte_trafico_voz(vSChemaTmp, "a_direction_number", FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)
-    reporte_voz_30_dias = generar_reporte(vSQL)
-    #print(etq_sql(vSQL))
+    vSQL = q_generar_reporte_trafico_voz("a_direction_number", vFIni2Mes, vFEje)
+    print('Se crea el reporte de trafico saliente voz desde inicio de mes hasta la fecha de ejecucion:')
+    reporte_voz_saliente = generar_reporte(vSQL)
+    print(etq_sql(vSQL))
 
-    reporte_voz_30_dias = reporte_voz_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
-    reporte_voz_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_saliente_30".format(vSChemaTmp))
+    reporte_voz_saliente = reporte_voz_saliente.join(universo_trafico_captacion, on="telefono", how="left")
+    reporte_voz_saliente.createOrReplaceTempView("reporte_voz_saliente")
+    #reporte_voz_saliente.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_saliente".format(vSChemaTmp))
 
     # se crea el reporte de trafico saliente voz para 7 dias    
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_saliente_30", "fecha_alta", "fecha_alta_7", sentido.lower(), "7")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_saliente", "fecha_alta", "fecha_alta_7", sentido.lower(), "7")    
+    print('Se crea el reporte de trafico saliente voz para 7 dias:')
     reporte_voz_7_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico saliente voz para 15 dias
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_saliente_30", "fecha_alta", "fecha_alta_15", sentido.lower(), "15")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_saliente", "fecha_alta", "fecha_alta_15", sentido.lower(), "15")    
+    print('Se crea el reporte de trafico saliente voz para 15 dias:')
     reporte_voz_15_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico saliente voz para 30 dias
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_saliente_30", "fecha_alta", "fecha_alta_30", sentido.lower(), "30")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_saliente", "fecha_alta", "fecha_alta_30", sentido.lower(), "30")    
+    print('Se crea el reporte de trafico saliente voz para 30 dias:')
     reporte_voz_30_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
@@ -347,8 +343,7 @@ try:
     else:
         vIRows = reporte_saliente_voz.count()
         print(etq_info(msg_t_total_registros_obtenidos('reporte_saliente_voz', str(vIRows))))
-        
-        # reporte_saliente_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_saliente_voz".format(vSChemaTmp))
+        #reporte_saliente_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_saliente_voz".format(vSChemaTmp))
 
         del reporte_voz_7_dias
         del reporte_voz_15_dias
@@ -372,25 +367,30 @@ try:
 
     sentido = "ENTRANTE"
 
-    vSQL = q_generar_reporte_trafico_voz(vSChemaTmp, "b_direction_number", FECHA_INICIO, FECHA_ALTA_PLUS_30, lineas_universo_altas)
-    reporte_voz_30_dias = generar_reporte(vSQL)
-    #print(etq_sql(vSQL))
+    vSQL = q_generar_reporte_trafico_voz("b_direction_number", vFIni2Mes, vFEje)
+    print('Se crea el reporte de trafico entrante voz desde inicio de mes hasta la fecha de ejecucion:')
+    reporte_voz_entrante = generar_reporte(vSQL)
+    print(etq_sql(vSQL))
 
-    reporte_voz_30_dias = reporte_voz_30_dias.join(universo_trafico_captacion, on="telefono", how="left")
-    reporte_voz_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_entrante_30".format(vSChemaTmp))
+    reporte_voz_entrante = reporte_voz_entrante.join(universo_trafico_captacion, on="telefono", how="left")
+    reporte_voz_entrante.createOrReplaceTempView("reporte_voz_entrante")
+    #reporte_voz_entrante.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_voz_entrante".format(vSChemaTmp))
 
     # se crea el reporte de trafico entrante voz para 7 dias
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_entrante_30", "fecha_alta", "fecha_alta_7", sentido.lower(), "7")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_entrante", "fecha_alta", "fecha_alta_7", sentido.lower(), "7")    
+    print('Se crea el reporte de trafico entrante voz para 7 dias:')
     reporte_voz_7_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico entrante voz para 15 dias
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_entrante_30", "fecha_alta", "fecha_alta_15", sentido.lower(), "15")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_entrante", "fecha_alta", "fecha_alta_15", sentido.lower(), "15")    
+    print('Se crea el reporte de trafico entrante voz para 15 dias:')
     reporte_voz_15_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
     # se crea el reporte de trafico entrante voz para 30 dias
-    vSQL = q_generar_reporte_trafico_voz_resumido(vSChemaTmp, "reporte_voz_entrante_30", "fecha_alta", "fecha_alta_30", sentido.lower(), "30")    
+    vSQL = q_generar_reporte_trafico_voz_resumido("reporte_voz_entrante", "fecha_alta", "fecha_alta_30", sentido.lower(), "30")    
+    print('Se crea el reporte de trafico entrante voz para 30 dias:')
     reporte_voz_30_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
     
@@ -404,7 +404,7 @@ try:
         vIRows = reporte_entrante_voz.count()
         print(etq_info(msg_t_total_registros_obtenidos('reporte_entrante_voz', str(vIRows))))
         
-        # reporte_entrante_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_entrante_voz".format(vSChemaTmp))
+        reporte_entrante_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_entrante_voz".format(vSChemaTmp))
         
         del reporte_voz_7_dias
         del reporte_voz_15_dias
@@ -426,9 +426,9 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    if ELIMINAR_PARTICION_PREVIA == "SI":
+    if vElimPartPre == "SI":
         try:
-            vSQL = q_borrar_trafico_captacion_previo(vSChemaTmp, FECHA_EJECUCION_ANTERIOR)
+            vSQL = q_borrar_trafico_captacion_previo(vSChema, vFEjeAnt)
             spark.sql(vSQL)
             print(etq_sql(vSQL))
         except:
@@ -436,7 +436,7 @@ try:
             pass
         
         try:
-            vSQL = q_borrar_trafico_captacion_previo(vSChemaTmp, FECHA_DOS_ANIOS_ATRAS)
+            vSQL = q_borrar_trafico_captacion_previo(vSChema, vF2AniosAtras)
             spark.sql(vSQL)
             print(etq_sql(vSQL))
         except:
@@ -464,7 +464,7 @@ try:
     reporte_trafico_captacion = reporte_trafico_captacion.join(reporte_trafico_datos, on="telefono", how="left")
     
     # se adjunta la fecha de ejecucion al reporte
-    reporte_trafico_captacion = reporte_trafico_captacion.withColumn("fecha_proceso", lit(FECHA_EJECUCION))
+    reporte_trafico_captacion = reporte_trafico_captacion.withColumn("fecha_proceso", lit(vFEje))
 
     # se reemplazan posibles valores nulos
     reporte_trafico_captacion = reporte_trafico_captacion.na.fill(value=0)
@@ -477,7 +477,7 @@ try:
 
         reporte_trafico_captacion.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.trafico_captacion_diario".format(vSChema))
 
-        vSQL = q_insertar_trafico_captacion(vSChema, FECHA_EJECUCION)
+        vSQL = q_insertar_trafico_captacion(vSChema, vFEje)
         spark.sql(vSQL)
         print(etq_sql(vSQL))
 

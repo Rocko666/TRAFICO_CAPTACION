@@ -12,7 +12,7 @@ sys.setdefaultencoding('utf8')
 # db_reportes.trafico_captacion
 # """
 
-def q_generar_universo_altas(FECHA_FIN):
+def q_generar_universo_altas(FECHA_INI,FECHA_FIN):
     qry = """
     SELECT telefono,
         CASE 
@@ -40,16 +40,17 @@ def q_generar_universo_altas(FECHA_FIN):
             ELSE SEGMENTO_FIN    
         END AS segmento
     FROM db_cs_altas.otc_t_altas_bi
-    WHERE p_fecha_proceso = {FECHA_FIN} 
+    WHERE p_fecha_proceso >= {FECHA_INI}  
+        AND p_fecha_proceso <= {FECHA_FIN} 
         AND LINEA_NEGOCIO <> 'PREPAGO'
         AND SUB_SEGMENTO NOT IN ('OTECEL', 'TELEFONÃA PÃšBLICA', 'TELEFONIA PUBLICA', 'CANALES EQUIPOS','MASIVO')
         AND CATEGORIA_PLAN = 'VOZ' 
         AND PLAN_CODIGO <> 'S2' 
         AND SEGMENTO_FIN IN ('EMPRESAS', 'GRANDES CUENTAS', 'NEGOCIOS', 'PYMES')
-    """.format(FECHA_FIN=FECHA_FIN)
+    """.format(FECHA_INI=FECHA_INI, FECHA_FIN=FECHA_FIN)
     return qry
 
-def q_generar_universo_transferencias(FECHA_FIN):
+def q_generar_universo_transferencias(FECHA_INI,FECHA_FIN):
     qry = """
     SELECT telefono,
         "Transferencia" AS tipo_movimiento,
@@ -61,13 +62,14 @@ def q_generar_universo_transferencias(FECHA_FIN):
             ELSE segmento_actual    
         END AS segmento
     FROM db_cs_altas.otc_t_transfer_in_bi
-    WHERE p_fecha_proceso = {FECHA_FIN} 
+    WHERE p_fecha_proceso >= {FECHA_INI}  
+        AND p_fecha_proceso <= {FECHA_FIN} 
         AND TIPO_DOC_CLIENTE IN ('RUC','RUC Personal','RUC/RUC Personal')
         AND LINEA_NEGOCIO <> 'PREPAGO' 
         AND CATEGORIA_ACTUAL = 'VOZ'
         AND SUB_SEGMENTO_ACTUAL NOT IN ('OTECEL','TELEFONÃA PÃšBLICA','TELEFONIA PUBLICA','CANALES EQUIPOS','MASIVO','MASIVO MIGRADO','NUEVOS INDIVIDUALES','CICLO ANTICIPADO NUEVOS INDIVIDUALES') 
         AND CODIGO_PLAN_ANTERIOR <> 'S2'
-    """.format(FECHA_FIN=FECHA_FIN)
+    """.format(FECHA_INI=FECHA_INI, FECHA_FIN=FECHA_FIN)
     return qry
 
 def q_generar_universo_trafico_captacion(vSChema):
@@ -84,55 +86,80 @@ def q_generar_universo_trafico_captacion(vSChema):
     """.format(vSChema=vSChema)
     return qry
 
-def q_generar_ventanas_moviles():
+def q_generar_ventanas_moviles(FECHA_EJECUCION):
     qry = """
-    SELECT MAX(fecha_alta_7) AS fecha_alta_7,
-        MAX(fecha_alta_15) AS fecha_alta_15,
-        MAX(fecha_alta_30) AS fecha_alta_30
+    SELECT tipo_movimiento,
+        telefono,
+        fecha_movimiento,
+        segmento,
+        fecha_alta,
+        CASE WHEN fecha_alta_7 > {FECHA_EJECUCION} THEN {FECHA_EJECUCION} ELSE fecha_alta_7 END AS fecha_alta_7,
+        CASE WHEN fecha_alta_15 > {FECHA_EJECUCION} THEN {FECHA_EJECUCION} ELSE fecha_alta_15 END AS fecha_alta_15,
+        CASE WHEN fecha_alta_30 > {FECHA_EJECUCION} THEN {FECHA_EJECUCION} ELSE fecha_alta_30 END AS fecha_alta_30
     FROM universo_trafico_captacion
-    """.format()
+    """.format(FECHA_EJECUCION=FECHA_EJECUCION)
     return qry
 
-def q_generar_reporte_trafico_datos(vSChema, FECHA_INICIO, FECHA_FIN, LINEAS_UNIVERSO_ALTAS):
+def q_generar_reporte_trafico_datos(FECHA_INICIO, FECHA_FIN):
     qry = """
-    SELECT numeroorigen as telefono,
+    SELECT dat.numeroorigen as telefono,
+        univ.tipo_movimiento,
+        univ.fecha_movimiento,
+        univ.segmento,
+        univ.fecha_alta,
+        univ.fecha_alta_7,
+        univ.fecha_alta_15,
+        univ.fecha_alta_30,
+        dat.vol_total_2g,
+        dat.vol_total_3g,
+        dat.vol_total_lte,
+        dat.vol_total_otro,
+        dat.activity_start_dt as fecha_proceso
+    FROM db_cmd.otc_t_dm_cur_t2 dat 
+    LEFT JOIN universo_trafico_captacion univ
+    ON dat.numeroorigen=univ.telefono
+    WHERE activity_start_dt >= {FECHA_INICIO} 
+        AND activity_start_dt <= {FECHA_FIN}
+        AND numeroorigen IN (SELECT DISTINCT telefono FROM universo_trafico_captacion)
+    """.format(FECHA_INICIO=FECHA_INICIO, 
+            FECHA_FIN=FECHA_FIN)
+    return qry
+
+def q_generar_reporte_trafico_datos_ventana(FECHA_INICIO, FECHA_FIN):
+    qry = """
+    SELECT telefono,
         vol_total_2g,
         vol_total_3g,
         vol_total_lte,
         vol_total_otro,
-        activity_start_dt as fecha_proceso
-    FROM db_cmd.otc_t_dm_cur_t2 
-    WHERE activity_start_dt >= {FECHA_INICIO} 
-        AND activity_start_dt <= {FECHA_FIN}
-        AND numeroorigen IN {LINEAS_UNIVERSO_ALTAS}
-    """.format(
-            vSChema=vSChema, 
-            FECHA_INICIO=FECHA_INICIO, 
-            FECHA_FIN=FECHA_FIN,
-            LINEAS_UNIVERSO_ALTAS=LINEAS_UNIVERSO_ALTAS
-        )
+        fecha_proceso,
+        tipo_movimiento,
+        fecha_movimiento,
+        segmento,
+        fecha_alta,
+        fecha_alta_7,
+        fecha_alta_15,
+        fecha_alta_30
+    FROM reporte_datos
+    WHERE fecha_proceso >= {FECHA_INICIO}
+        AND fecha_proceso <= {FECHA_FIN}
+    """.format(FECHA_INICIO=FECHA_INICIO, 
+            FECHA_FIN=FECHA_FIN)
     return qry
 
-def q_generar_reporte_trafico_datos_resumido(vSChema, TABLA, COLUMNA_FECHA_INICIO, COLUMNA_FECHA_FIN):
+def q_generar_reporte_trafico_datos_resumido(TABLA):
     qry = """
     SELECT telefono,
         CAST(SUM(COALESCE(vol_total_2g, 0)/1024/1024) AS decimal(19, 2)) AS total_trafico_2g,
         CAST(SUM(COALESCE(vol_total_3g, 0)/1024/1024) AS decimal(19, 2)) AS total_trafico_3g,
         CAST(SUM(COALESCE(vol_total_lte, 0)/1024/1024) AS decimal(19, 2)) AS total_trafico_lte,
         CAST(SUM(COALESCE(vol_total_otro, 0)/1024/1024) AS decimal(19, 2)) AS total_trafico_otro
-    FROM {vSChema}.{TABLA}
-    WHERE fecha_proceso >= {COLUMNA_FECHA_INICIO} 
-        AND fecha_proceso <= {COLUMNA_FECHA_FIN}
+    FROM {TABLA}
     GROUP BY telefono
-    """.format(
-        vSChema=vSChema,
-        TABLA=TABLA,
-        COLUMNA_FECHA_INICIO=COLUMNA_FECHA_INICIO,
-        COLUMNA_FECHA_FIN=COLUMNA_FECHA_FIN 
-    )
+    """.format(TABLA=TABLA)
     return qry
 
-def q_generar_reporte_trafico_voz(vSChema, COLUMNA, FECHA_INICIO, FECHA_FIN, LINEAS_UNIVERSO_ALTAS):
+def q_generar_reporte_trafico_voz(COLUMNA, FECHA_INICIO, FECHA_FIN):
     qry = """
     SELECT {COLUMNA} AS telefono,
         duracion,
@@ -140,26 +167,21 @@ def q_generar_reporte_trafico_voz(vSChema, COLUMNA, FECHA_INICIO, FECHA_FIN, LIN
     FROM db_trafica.otc_t_cur_voz_trafica 
     WHERE fecha_evento_int >= {FECHA_INICIO} 
         AND fecha_evento_int <= {FECHA_FIN}
-        AND {COLUMNA} IN {LINEAS_UNIVERSO_ALTAS}
-    """.format(
-        vSChema=vSChema,
-        COLUMNA=COLUMNA,
+        AND {COLUMNA} IN (SELECT DISTINCT telefono FROM universo_trafico_captacion)
+    """.format(COLUMNA=COLUMNA,
         FECHA_INICIO=FECHA_INICIO,
-        FECHA_FIN=FECHA_FIN,
-        LINEAS_UNIVERSO_ALTAS=LINEAS_UNIVERSO_ALTAS
-    )
+        FECHA_FIN=FECHA_FIN)
     return qry
 
-def q_generar_reporte_trafico_voz_resumido(vSChema, TABLA, COLUMNA_FECHA_INICIO, COLUMNA_FECHA_FIN, sentido, DIAS):
+def q_generar_reporte_trafico_voz_resumido(TABLA, COLUMNA_FECHA_INICIO, COLUMNA_FECHA_FIN, sentido, DIAS):
     qry = """
     SELECT telefono,
         SUM(ABS(CAST(COALESCE(duracion, 0) AS int))) AS trafico_{sentido}_voz_{DIAS}
-    FROM {vSChema}.{TABLA}
+    FROM {TABLA}
     WHERE fecha_proceso >= {COLUMNA_FECHA_INICIO} 
         AND fecha_proceso <= {COLUMNA_FECHA_FIN}
 	GROUP BY telefono
     """.format(
-        vSChema=vSChema,
         TABLA=TABLA,
         DIAS=DIAS,
         sentido=sentido,

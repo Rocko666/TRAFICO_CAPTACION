@@ -17,7 +17,7 @@ set -e
 #------------------------------------------------------
 # PARAMETROS DE LA SHELL
 #------------------------------------------------------
-FECHA_EJECUCION=$1
+VAL_FECHA_EJECUCION=$1
 
 ENTIDAD=D_RPRTTRFCCPTCN0010
 AMBIENTE=0 # AMBIENTE (1=produccion, 0=desarrollo)
@@ -63,32 +63,39 @@ VAL_SFTP_PASS_OUT=$(mysql -N <<<"select valor from params where ENTIDAD = 'SFTP_
 VAL_SFTP_RUTA_OUT=$(mysql -N <<<"select valor from $TABLA where ENTIDAD = '"$ENTIDAD"' AND parametro = 'VAL_SFTP_RUTA_OUT';")
 
 #------------------------------------------------------
-# PARAMETROS CALCULADO
+# PARAMETROS CALCULADOS
 #------------------------------------------------------
 VAL_MODO=0
 VAL_BANDERA_FTP=0
 ini_fecha=$(date '+%Y%m%d%H%M%S')
 VAL_LOG=$VAL_RUTA/logs/trafico_captacion_$ini_fecha.log
-ELIMINAR_PARTICION_PREVIA="SI"
-FECHA_DOS_ANIOS_ATRAS=$FECHA_EJECUCION
-FECHA_FIN_MES_PREVIO=$(date '+%Y%m' -d "$FECHA_EJECUCION")"01"
-FECHA_FIN_MES_PREVIO=$(date '+%Y%m%d' -d "$FECHA_FIN_MES_PREVIO-1 day")
-FECHA_INICIO=$(date '+%Y%m%d' -d "$FECHA_EJECUCION-1 month")
-FECHA_EJECUCION_ANTERIOR=$(date '+%Y%m%d' -d "$FECHA_EJECUCION-1 day")
-DIA_EJECUCION=$(date '+%d' -d "$FECHA_EJECUCION")
+VAL_ELIM_PART_PREVIA="SI"
+VAL_FECHA_EJECUCION_ANTERIOR=$(date '+%Y%m%d' -d "$VAL_FECHA_EJECUCION-1 day")
+VAL_DIA_EJE=$(date '+%d' -d "$VAL_FECHA_EJECUCION")
 
-if [ $DIA_EJECUCION = "01" ]; then
-    FECHA_DOS_ANIOS_ATRAS=$(date '+%Y%m%d' -d "$FECHA_EJECUCION-24 month")
+if [ $VAL_DIA_EJE = "01" ]; then
+    VAL_FECHA_DOS_ANIOS_ATRAS=$(date '+%Y%m%d' -d "$VAL_FECHA_EJECUCION-24 month")
+    VAL_FECHA_INI_MES=$(date -d "$VAL_FECHA_EJECUCION -1 month" +%Y%m%d)
+    VAL_FECHA_INI_2MES=$(date -d "$VAL_FECHA_EJECUCION -2 month" +%Y%m%d)
+else
+    VAL_FECHA_INI_MES=$(date -d "$VAL_FECHA_EJECUCION" +%Y%m)"01"
+    VAL_FECHA_INI_2MES=$(date -d "$VAL_FECHA_EJECUCION -1 month" +%Y%m)"01"
 fi
 
-if [ $DIA_EJECUCION = "02" ]; then
-    ELIMINAR_PARTICION_PREVIA="NO"
+if [ $VAL_DIA_EJE = "02" ]; then
+    VAL_ELIM_PART_PREVIA="NO"
 fi
 
 #------------------------------------------------------
 # VALIDACION DE PARAMETROS
 #------------------------------------------------------
-if [ -z "$FECHA_EJECUCION" ] ||
+if [ -z "$VAL_FECHA_EJECUCION" ] ||
+    [ -z "$VAL_FECHA_DOS_ANIOS_ATRAS" ] ||
+    [ -z "$VAL_FECHA_EJECUCION_ANTERIOR" ] ||
+    [ -z "$VAL_ELIM_PART_PREVIA" ] ||
+    [ -z "$VAL_DIA_EJE" ] ||
+    [ -z "$VAL_FECHA_INI_MES" ] ||
+    [ -z "$VAL_FECHA_INI_2MES" ] ||
     [ -z "$VAL_RUTA" ] ||
     [ -z "$VAL_LOCAL_RUTA_OUT" ] ||
     [ -z "$VAL_NOM_FILE_OUT" ] ||
@@ -118,7 +125,7 @@ fi
 #------------------------------------------------------
 # IMPRESION PARAMETROS
 #------------------------------------------------------
-echo "FECHA_EJECUCION: $FECHA_EJECUCION" >>$VAL_LOG
+echo "VAL_FECHA_EJECUCION: $VAL_FECHA_EJECUCION" >>$VAL_LOG
 echo "VAL_RUTA: $VAL_RUTA" >>$VAL_LOG
 echo "VAL_LOCAL_RUTA_OUT: $VAL_LOCAL_RUTA_OUT" >>$VAL_LOG
 echo "VAL_NOM_FILE_OUT: $VAL_NOM_FILE_OUT" >>$VAL_LOG
@@ -140,11 +147,10 @@ echo "VAL_SFTP_PORT_OUT: $VAL_SFTP_PORT_OUT" >>$VAL_LOG
 echo "VAL_SFTP_USER_OUT: $VAL_SFTP_USER_OUT" >>$VAL_LOG
 echo "VAL_SFTP_PASS_OUT: $VAL_SFTP_PASS_OUT" >>$VAL_LOG
 echo "VAL_SFTP_RUTA_OUT: $VAL_SFTP_RUTA_OUT" >>$VAL_LOG
-echo "ELIMINAR_PARTICION_PREVIA: $ELIMINAR_PARTICION_PREVIA" >>$VAL_LOG
-echo "FECHA_EJECUCION_ANTERIOR: $FECHA_EJECUCION_ANTERIOR" >>$VAL_LOG
-echo "FECHA_DOS_ANIOS_ATRAS: $FECHA_DOS_ANIOS_ATRAS" >>$VAL_LOG
-echo "FECHA_INICIO: $FECHA_INICIO" >>$VAL_LOG
-echo "FECHA_FIN_MES_PREVIO: $FECHA_FIN_MES_PREVIO" >>$VAL_LOG
+echo "VAL_ELIM_PART_PREVIA: $VAL_ELIM_PART_PREVIA" >>$VAL_LOG
+echo "VAL_FECHA_EJECUCION_ANTERIOR: $VAL_FECHA_EJECUCION_ANTERIOR" >>$VAL_LOG
+echo "VAL_FECHA_DOS_ANIOS_ATRAS: $VAL_FECHA_DOS_ANIOS_ATRAS" >>$VAL_LOG
+echo "VAL_FECHA_INI_MES: $VAL_FECHA_INI_MES" >>$VAL_LOG
 
 #------------------------------------------------------
 # GENERACION DE REPORTE TRAFICO CAPTACION
@@ -164,12 +170,12 @@ if [ $ETAPA = 1 ]; then
         --vSEntidad=$ENTIDAD \
         --vSChema=$ESQUEMA \
         --vSChemaTmp=$ESQUEMA_TMP \
-        --FECHA_EJECUCION=$FECHA_EJECUCION \
-        --FECHA_EJECUCION_ANTERIOR=$FECHA_EJECUCION_ANTERIOR \
-        --ELIMINAR_PARTICION_PREVIA=$ELIMINAR_PARTICION_PREVIA \
-        --FECHA_DOS_ANIOS_ATRAS=$FECHA_DOS_ANIOS_ATRAS \
-        --FECHA_INICIO=$FECHA_INICIO \
-        --FECHA_FIN_MES_PREVIO=$FECHA_FIN_MES_PREVIO 2>&1 &>> $VAL_LOG
+        --VAL_FECHA_EJECUCION=$VAL_FECHA_EJECUCION \
+        --VAL_FECHA_EJECUCION_ANTERIOR=$VAL_FECHA_EJECUCION_ANTERIOR \
+        --VAL_ELIM_PART_PREVIA=$VAL_ELIM_PART_PREVIA \
+        --VAL_FECHA_DOS_ANIOS_ATRAS=$VAL_FECHA_DOS_ANIOS_ATRAS \
+        --VAL_FECHA_INI_MES=$VAL_FECHA_INI_MES \
+        --VAL_FECHA_INI_2MES=$VAL_FECHA_INI_2MES 2>&1 &>> $VAL_LOG
 
     echo "==== FIN PROCESO GENERACION DE REPORTE TRAFICO CAPTACION ====" >>$VAL_LOG
 
