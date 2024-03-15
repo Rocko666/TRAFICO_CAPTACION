@@ -38,7 +38,8 @@ def q_generar_universo_altas(FECHA_INI,FECHA_FIN):
             WHEN SEGMENTO_FIN = 'TELEFONIA PUBLICA' THEN 'B2B'    
             WHEN SEGMENTO_FIN = '' THEN 'B2C'
             ELSE SEGMENTO_FIN    
-        END AS segmento
+        END AS segmento,
+        ROW_NUMBER() OVER (PARTITION BY telefono,fecha_alta ORDER BY p_fecha_proceso DESC) AS orden
     FROM db_cs_altas.otc_t_altas_bi
     WHERE p_fecha_proceso >= {FECHA_INI}  
         AND p_fecha_proceso <= {FECHA_FIN} 
@@ -60,7 +61,8 @@ def q_generar_universo_transferencias(FECHA_INI,FECHA_FIN):
             WHEN segmento_actual = 'GGCC' THEN 'B2B'    
             WHEN segmento_actual = 'NEGOCIOS' THEN 'B2B' 
             ELSE segmento_actual    
-        END AS segmento
+        END AS segmento,
+        ROW_NUMBER() OVER (PARTITION BY telefono,fecha_transferencia ORDER BY p_fecha_proceso DESC) AS orden
     FROM db_cs_altas.otc_t_transfer_in_bi
     WHERE p_fecha_proceso >= {FECHA_INI}  
         AND p_fecha_proceso <= {FECHA_FIN} 
@@ -72,7 +74,7 @@ def q_generar_universo_transferencias(FECHA_INI,FECHA_FIN):
     """.format(FECHA_INI=FECHA_INI, FECHA_FIN=FECHA_FIN)
     return qry
 
-def q_generar_universo_trafico_captacion(vSChema):
+def q_generar_universo_trafico_captacion(vTabla):
     qry = """
     SELECT tipo_movimiento,
         telefono,
@@ -82,8 +84,8 @@ def q_generar_universo_trafico_captacion(vSChema):
         date_format(date_add(fecha_movimiento, 6),'yyyyMMdd') fecha_alta_7,
         date_format(date_add(fecha_movimiento, 14),'yyyyMMdd') fecha_alta_15,
         date_format(date_add(fecha_movimiento, 29),'yyyyMMdd') fecha_alta_30
-    FROM {vSChema}.universo_trafico_captacion
-    """.format(vSChema=vSChema)
+    FROM {vTabla}
+    """.format(vTabla=vTabla)
     return qry
 
 def q_generar_ventanas_moviles(FECHA_EJECUCION):
@@ -216,6 +218,50 @@ def q_insertar_trafico_captacion(vSChema, FECHA_EJECUCION):
         """.format(vSChema=vSChema, FECHA_EJECUCION=FECHA_EJECUCION)
 	return qry
 
+def depuracion_tabla(vSChema,FECHA):
+    qry="""
+		SELECT tipo_movimiento,
+            telefono,
+            fecha_movimiento,
+            trafico_entrante_voz_7,
+            trafico_saliente_voz_7,
+            total_trafico_datos_7,
+            trafico_entrante_voz_15,
+            trafico_saliente_voz_15,
+            total_trafico_datos_15,
+            trafico_entrante_voz_30,
+            trafico_saliente_voz_30,
+            total_trafico_datos_30,
+            segmento
+		FROM {vSChema}.trafico_captacion
+        WHERE fecha_proceso={FECHA}
+        """.format(vSChema=vSChema,
+                FECHA=FECHA
+                )
+    return qry
+
+def q_insertar_tabla_depurada(vSChema, vVista, FECHA):
+	qry = """
+		INSERT OVERWRITE TABLE {vSChema}.trafico_captacion PARTITION(fecha_proceso={FECHA})
+		SELECT tipo_movimiento,
+            telefono,
+            fecha_movimiento,
+            trafico_entrante_voz_7,
+            trafico_saliente_voz_7,
+            total_trafico_datos_7,
+            trafico_entrante_voz_15,
+            trafico_saliente_voz_15,
+            total_trafico_datos_15,
+            trafico_entrante_voz_30,
+            trafico_saliente_voz_30,
+            total_trafico_datos_30,
+            segmento
+		FROM {vVista}
+        """.format(vSChema=vSChema,
+                vVista=vVista, 
+                FECHA=FECHA)
+	return qry
+
 def q_generar_reporte_trafico_captacion(vSChema):
 	qry="""
 		SELECT tipo_movimiento,
@@ -230,8 +276,8 @@ def q_generar_reporte_trafico_captacion(vSChema):
             trafico_entrante_voz_30,
             trafico_saliente_voz_30,
             total_trafico_datos_30,
-            fecha_proceso,
-            segmento
+            segmento,
+            fecha_proceso
 		FROM {vSChema}.trafico_captacion
         """.format(vSChema=vSChema)
 	return qry

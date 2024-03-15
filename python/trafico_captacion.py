@@ -95,7 +95,7 @@ try:
     print(etq_sql(vSQL))
 
     universo_altas = spark.sql(vSQL)
-    universo_altas = universo_altas.select("telefono", "tipo_movimiento", "fecha_movimiento","segmento")
+    universo_altas = universo_altas.where(col("orden") == '1')
     universo_altas.show(3)
 
     if universo_altas.limit(1).count <= 0:
@@ -123,6 +123,7 @@ try:
     print(etq_sql(vSQL))
 
     universo_transferencias = spark.sql(vSQL)
+    universo_transferencias = universo_transferencias.where(col('orden')=='1')
     universo_transferencias.show(3)
     
     if universo_transferencias.limit(1).count <= 0:
@@ -153,7 +154,7 @@ try:
     else:
         vIRows = universo_trafico_captacion.count()
         print(etq_info(msg_t_total_registros_obtenidos('universo', str(vIRows))))
-        universo_trafico_captacion.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.universo_trafico_captacion".format(vSChemaTmp))
+        universo_trafico_captacion.createOrReplaceTempView("universo_trafico_captacion")
         del universo_altas
         del universo_transferencias
         del universo_trafico_captacion
@@ -173,7 +174,7 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_generar_universo_trafico_captacion(vSChemaTmp)    
+    vSQL = q_generar_universo_trafico_captacion('universo_trafico_captacion')    
     print(etq_sql(vSQL))
 
     universo_trafico_captacion = spark.sql(vSQL)
@@ -267,6 +268,12 @@ try:
     #reporte_datos_30_dias.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.reporte_datos_30_dias".format(vSChemaTmp))    
     print(etq_sql(vSQL))
 
+    #Eliminacion DF's y Vistas
+    spark.catalog.dropTempView("reporte_datos") 
+    spark.catalog.dropTempView("reporte_datos_7_dias") 
+    spark.catalog.dropTempView("reporte_datos_15_dias") 
+    spark.catalog.dropTempView("reporte_datos_30_dias") 
+
     # se suman las 4 columnas de trafico datos
     reporte_datos_7_dias = sumar_trafico_datos(reporte_datos_7_dias, "total_trafico_datos_7")
     reporte_datos_15_dias = sumar_trafico_datos(reporte_datos_15_dias, "total_trafico_datos_15")
@@ -283,12 +290,11 @@ try:
         vIRows = reporte_trafico_datos.count()
         print(etq_info(msg_t_total_registros_obtenidos('reporte_trafico_datos', str(vIRows))))
         
-        reporte_trafico_datos.write.mode("overwrite").saveAsTable("{}.trafico_captacion_datos".format(vSChemaTmp))
+        #reporte_trafico_datos.write.mode("overwrite").saveAsTable("{}.trafico_captacion_datos".format(vSChemaTmp))
 
         del reporte_datos_7_dias
         del reporte_datos_15_dias
         del reporte_datos_30_dias
-        # del reporte_trafico_datos
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -334,6 +340,9 @@ try:
     reporte_voz_30_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
 
+    #Eliminacion DF's y Vistas
+    spark.catalog.dropTempView("reporte_voz_saliente") 
+
     # se crea el reporte trafico saliente voz
     reporte_saliente_voz = reporte_voz_30_dias.join(reporte_voz_15_dias, on="telefono", how="left")
     reporte_saliente_voz = reporte_saliente_voz.join(reporte_voz_7_dias, on="telefono", how="left")
@@ -348,7 +357,6 @@ try:
         del reporte_voz_7_dias
         del reporte_voz_15_dias
         del reporte_voz_30_dias
-        # del reporte_saliente_voz
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -371,6 +379,8 @@ try:
     print('Se crea el reporte de trafico entrante voz desde inicio de mes hasta la fecha de ejecucion:')
     reporte_voz_entrante = generar_reporte(vSQL)
     print(etq_sql(vSQL))
+    #Eliminacion DF's y Vistas
+    spark.catalog.dropTempView("universo_trafico_captacion") 
 
     reporte_voz_entrante = reporte_voz_entrante.join(universo_trafico_captacion, on="telefono", how="left")
     reporte_voz_entrante.createOrReplaceTempView("reporte_voz_entrante")
@@ -393,6 +403,9 @@ try:
     print('Se crea el reporte de trafico entrante voz para 30 dias:')
     reporte_voz_30_dias = spark.sql(vSQL)
     print(etq_sql(vSQL))
+
+    #Eliminacion DF's y Vistas
+    spark.catalog.dropTempView("reporte_voz_entrante")
     
     # se crea el reporte trafico entrante voz
     reporte_entrante_voz = reporte_voz_30_dias.join(reporte_voz_15_dias, on="telefono", how="left")    
@@ -404,12 +417,11 @@ try:
         vIRows = reporte_entrante_voz.count()
         print(etq_info(msg_t_total_registros_obtenidos('reporte_entrante_voz', str(vIRows))))
         
-        reporte_entrante_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_entrante_voz".format(vSChemaTmp))
+        #reporte_entrante_voz.write.mode("overwrite").saveAsTable("{}.trafico_captacion_entrante_voz".format(vSChemaTmp))
         
         del reporte_voz_7_dias
         del reporte_voz_15_dias
         del reporte_voz_30_dias
-        # del reporte_entrante_voz
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -484,7 +496,6 @@ try:
         del reporte_entrante_voz
         del reporte_saliente_voz
         del reporte_trafico_datos
-        del reporte_trafico_captacion
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -492,6 +503,47 @@ except Exception as e:
     exit(etq_error(msg_e_ejecucion(vSStep, str(e))))
 print(lne_dvs())
 
+print(lne_dvs())
+vSStep = 'Paso [11]: Depuracion de telefonos duplicados con cierre mes anterior'
+print(etq_info(vSStep))
+try:
+    ts_step = datetime.now()  
+    print(lne_dvs())
+
+    # Consulta tabla trafico captacion de cierre de mes anterior
+    print("Cierre mes anterior: "+ str(vFIniMes))
+    vSQL = depuracion_tabla(vSChema,vFIniMes)    
+    print(etq_sql(vSQL))
+    df_depuracion = spark.sql(vSQL)
+    # Depuracion de registros en cierre de mes anterior
+    df_depuracion=df_depuracion.join(reporte_trafico_captacion, on=["telefono", "fecha_movimiento"], how="left_anti")
+    #Eliminacion DF's y Vistas
+    del reporte_trafico_captacion
+    
+    # se reemplazan posibles valores nulos
+    df_depuracion = df_depuracion.na.fill(value=0)
+
+    vIRows = df_depuracion.limit(1).count    
+    if vIRows <= 0:    
+        exit(etq_nodata(msg_e_df_nodata(str('DF depuracion'))))
+    else:
+        print(etq_info(msg_t_total_registros_obtenidos('DF depuracion', str(vIRows))))
+        df_depuracion.createOrReplaceTempView("tabla_depurada")
+        
+        #Eliminacion DF's y Vistas
+        del df_depuracion
+        vSQL = q_insertar_tabla_depurada(vSChema, "tabla_depurada", vFIniMes)
+        print(etq_sql(vSQL))
+        spark.sql(vSQL)
+        
+        #Eliminacion DF's y Vistas
+        spark.catalog.dropTempView("tabla_depurada") 
+
+    te_step = datetime.now()
+    print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
+except Exception as e:
+    exit(etq_error(msg_e_ejecucion(vSStep, str(e))))
+print(lne_dvs())
 
 print(lne_dvs())
 spark.stop()
